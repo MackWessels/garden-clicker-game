@@ -10,15 +10,19 @@ root.geometry("800x600")
 
 score = 0
 has_mower = False
+has_flower_upgrade = False
+flowers = []
 
-background_img = Image.open("pictures/garden.jpg")
-background_img = background_img.resize((800, 600))
+# Load images
+background_img = Image.open("pictures/garden.jpg").resize((800, 600))
 background_photo = ImageTk.PhotoImage(background_img)
 
-mower_img_original = Image.open("pictures/mower.png")
-mower_img_original = mower_img_original.resize((100, 100))
+mower_img_original = Image.open("pictures/mower.png").resize((100, 100))
 mower_photo = ImageTk.PhotoImage(mower_img_original)
 
+flower_img_original = Image.open("pictures/flower.png")
+
+# Set up canvas and elements
 canvas = tk.Canvas(root, width=800, height=600)
 canvas.pack(fill="both", expand=True)
 
@@ -28,6 +32,7 @@ mower = canvas.create_image(-200, 450, image=mower_photo, anchor="nw")
 score_label = tk.Label(root, text="Score: 0", font=("Arial", 16), bg="lightgreen")
 score_label.place(x=10, y=10)
 
+# Normal click
 def click():
     global score
     score += 1
@@ -36,6 +41,7 @@ def click():
 click_button = tk.Button(root, text="Click Me!", font=("Arial", 14), command=click)
 click_button.place(x=10, y=50)
 
+# Mower logic
 def start_mower():
     global has_mower
     def mower_loop():
@@ -75,5 +81,60 @@ def buy_mower():
 
 buy_button = tk.Button(root, text="Buy Mower (50)", font=("Arial", 14), command=buy_mower)
 buy_button.place(x=10, y=100)
+
+# Flower logic
+def collect_flower(flower_id, image_ref):
+    global score
+    score += 3
+    score_label.config(text=f"Score: {score}")
+    canvas.delete(flower_id)
+    flowers[:] = [f for f in flowers if f[0] != flower_id]
+
+def spawn_flower():
+    def grow_flower(x, y):
+        size = 10
+        max_size = 80
+        flower = None
+
+        def grow():
+            nonlocal size, flower
+            if flower:
+                canvas.delete(flower)
+            if size >= max_size:
+                img = flower_img_original.resize((max_size, max_size))
+                photo = ImageTk.PhotoImage(img)
+                flower = canvas.create_image(x, y, image=photo, anchor="center")
+                canvas.tag_bind(flower, "<Button-1>", lambda e: collect_flower(flower, photo))
+                flowers.append((flower, photo))
+            else:
+                img = flower_img_original.resize((size, size))
+                photo = ImageTk.PhotoImage(img)
+                flower = canvas.create_image(x, y, image=photo, anchor="center")
+                flowers.append((flower, photo))
+                canvas.after(50, grow)
+                size += 5
+
+        grow()
+
+    x = random.randint(100, 700)
+    y = random.randint(300, 550)
+    grow_flower(x, y)
+
+def flower_spawner_loop():
+    if has_flower_upgrade:
+        spawn_flower()
+    root.after(4000, flower_spawner_loop)
+
+def buy_flower_upgrade():
+    global has_flower_upgrade, score
+    if not has_flower_upgrade and score >= 30:
+        score -= 30
+        score_label.config(text=f"Score: {score}")
+        has_flower_upgrade = True
+        flower_button.config(state="disabled")
+        flower_spawner_loop()
+
+flower_button = tk.Button(root, text="Buy Flower Seeds (30)", font=("Arial", 14), command=buy_flower_upgrade)
+flower_button.place(x=10, y=150)
 
 root.mainloop()
