@@ -1,8 +1,11 @@
+# Garden Clicker Game with Bee Upgrade That Adds Score After Each Flight
+
 import tkinter as tk
 from PIL import Image, ImageTk, ImageOps
 import threading
 import time
 import random
+import math
 
 root = tk.Tk()
 root.title("Garden Clicker Game")
@@ -11,6 +14,7 @@ root.geometry("800x600")
 score = 0
 has_mower = False
 has_flower_upgrade = False
+has_bee_upgrade = False
 flowers = []
 
 # Load images
@@ -21,18 +25,23 @@ mower_img_original = Image.open("pictures/mower.png").resize((100, 100))
 mower_photo = ImageTk.PhotoImage(mower_img_original)
 
 flower_img_original = Image.open("pictures/flower.png")
+bee_img_base = Image.open("pictures/bee.png").resize((60, 60))
+bee_img_right = bee_img_base.rotate(-90, expand=True)
+bee_img_left = bee_img_base.rotate(90, expand=True)
+bee_photo = ImageTk.PhotoImage(bee_img_right)
 
-# Set up canvas and elements
+# Set up canvas
 canvas = tk.Canvas(root, width=800, height=600)
 canvas.pack(fill="both", expand=True)
 
 canvas_bg = canvas.create_image(0, 0, image=background_photo, anchor="nw")
 mower = canvas.create_image(-200, 450, image=mower_photo, anchor="nw")
+bee = canvas.create_image(-100, 100, image=bee_photo, anchor="nw")
 
 score_label = tk.Label(root, text="Score: 0", font=("Arial", 16), bg="lightgreen")
 score_label.place(x=10, y=10)
 
-# Normal click
+# Clicking logic
 def click():
     global score
     score += 1
@@ -55,8 +64,7 @@ def start_mower():
                 end_x = 800
                 step = 10
             else:
-                flipped_img = ImageOps.mirror(mower_img_original)
-                current_img = flipped_img
+                current_img = ImageOps.mirror(mower_img_original)
                 start_x = 800
                 end_x = -200
                 step = -10
@@ -69,8 +77,7 @@ def start_mower():
             score_label.config(text=f"Score: {score}")
             canvas.coords(mower, -200, 450)
             time.sleep(10)
-    t = threading.Thread(target=mower_loop, daemon=True)
-    t.start()
+    threading.Thread(target=mower_loop, daemon=True).start()
 
 def buy_mower():
     global has_mower, score
@@ -136,5 +143,55 @@ def buy_flower_upgrade():
 
 flower_button = tk.Button(root, text="Buy Flower Seeds (30)", font=("Arial", 14), command=buy_flower_upgrade)
 flower_button.place(x=10, y=150)
+
+# Bee logic
+def start_bee():
+    def bee_loop():
+        global bee_photo, score
+        while True:
+            from_left = random.choice([True, False])
+            y_base = random.randint(100, 300)
+            frequency = random.uniform(0.05, 0.15)
+            amplitude = random.randint(20, 60)
+
+            if from_left:
+                current_bee_img = bee_img_right
+                x = -60
+                step = 5
+            else:
+                current_bee_img = bee_img_left
+                x = 800
+                step = -5
+
+            bee_photo_local = ImageTk.PhotoImage(current_bee_img)
+            canvas.itemconfig(bee, image=bee_photo_local)
+
+            t = 0
+            while -60 <= x <= 800:
+                y = y_base + int(amplitude * math.sin(frequency * t))
+                canvas.coords(bee, x, y)
+                time.sleep(0.02)
+                x += step
+                t += 1
+
+            # Add score after flight
+            score += 5
+            score_label.config(text=f"Score: {score}")
+            canvas.coords(bee, -100, 100)
+            time.sleep(6)
+
+    threading.Thread(target=bee_loop, daemon=True).start()
+
+def buy_bee_upgrade():
+    global has_bee_upgrade, score
+    if not has_bee_upgrade and score >= 100:
+        score -= 100
+        score_label.config(text=f"Score: {score}")
+        has_bee_upgrade = True
+        bee_button.config(state="disabled")
+        start_bee()
+
+bee_button = tk.Button(root, text="Buy Bee (100)", font=("Arial", 14), command=buy_bee_upgrade)
+bee_button.place(x=10, y=200)
 
 root.mainloop()
