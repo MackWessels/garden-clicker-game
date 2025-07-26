@@ -1,6 +1,6 @@
 # Garden Clicker Game
 
-![Screenshot](screenshot.PNG)
+![Screenshot](pictures/screenshot.PNG)
 
 This is a fun little clicker game made with Python and Tkinter. You click to earn points and use those points to unlock upgrades like a mower, flowers, and a bee that fly across the screen.
 
